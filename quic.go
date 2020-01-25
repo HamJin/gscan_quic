@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	quic "github.com/lucas-clemente/quic-go"
-	"github.com/lucas-clemente/quic-go/h2quic"
+	quic "github.com/hamjin/quic-go"
+	"github.com/hamjin/quic-go/h2quic"
 )
 
 var errNoSuchBucket = []byte("<?xml version='1.0' encoding='UTF-8'?><Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist.</Message></Error>")
