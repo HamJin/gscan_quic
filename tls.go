@@ -36,11 +36,16 @@ func testTls(ip string, config *ScanConfig, record *ScanRecord) bool {
 	tlscfg := &tls.Config{
 		InsecureSkipVerify: true,
 		MinVersion:         tls.VersionTLS10,
-		MaxVersion:         tls.VersionTLS12,
+		MaxVersion:         tls.VersionTLS13,
 		CipherSuites: []uint16{
+			tls.TLS_AES_128_GCM_SHA256,
+			tls.LS_CHACHA20_POLY1305_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305，
 			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
 			tls.TLS_RSA_WITH_AES_128_CBC_SHA256,
-			tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
 		},
 		ServerName: serverName,
 	}
@@ -52,7 +57,7 @@ func testTls(ip string, config *ScanConfig, record *ScanRecord) bool {
 	if err = tlsconn.Handshake(); err != nil {
 		return false
 	}
-	if config.Level > 1 {
+	if config.Level = 1 {
 		pcs := tlsconn.ConnectionState().PeerCertificates
 		if pcs == nil || len(pcs) < 2 {
 			return false
