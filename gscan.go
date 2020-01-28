@@ -81,7 +81,7 @@ func initConfig(cfgfile, execFolder string) *GScanConfig {
 	gcfg.ScanMinPingRTT = gcfg.ScanMinPingRTT * time.Millisecond
 	gcfg.ScanMaxPingRTT = gcfg.ScanMaxPingRTT * time.Millisecond
 
-	cfgs := []*ScanConfig{&gcfg.Quic, &gcfg.Tls, &gcfg.Sni, &gcfg.Ping}
+	cfgs := []*ScanConfig{&gcfg.Tls, &gcfg.Sni, &gcfg.Ping}
 	for _, c := range cfgs {
 		if strings.HasPrefix(c.InputFile, "./") {
 			c.InputFile = filepath.Join(execFolder, c.InputFile)
@@ -143,9 +143,6 @@ func main() {
 	var cfg *ScanConfig
 	scanMode := gcfg.ScanMode
 	switch scanMode {
-	case "quic":
-		cfg = &gcfg.Quic
-		testIPFunc = testQuic
 	case "tls":
 		cfg = &gcfg.Tls
 		testIPFunc = testTls
@@ -155,9 +152,12 @@ func main() {
 	case "ping":
 		cfg = &gcfg.Ping
 		testIPFunc = testPing
-	case "socks5":
-		// testIPFunc = testSocks5
-	default:
+	case "gws":
+		cfg = &gcfg.Tls
+		testIPFunc = testgws
+	default: 
+		cfg = &gcfg.Tls
+		testIPFunc = testgws
 	}
 
 	iprangeFile := cfg.InputFile

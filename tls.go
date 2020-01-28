@@ -1,22 +1,16 @@
 package main
 
 import (
-	"bytes"
 	"crypto/tls"
-	"encoding/base64"
 	"io"
 	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
 	"time"
+	"strings"
 )
 
-var (
-	g2pkp, _ = base64.StdEncoding.DecodeString("MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnCoEd1zYUJE6BqOC4NhQSLyJP/EZcBqIRn7gj8Xxic4h7lr+YQ23MkSJoHQLU09VpM6CYpXu61lfxuEFgBLEXpQ/vFtIOPRT9yTm+5HpFcTP9FMN9Er8n1Tefb6ga2+HwNBQHygwA0DaCHNRbH//OjynNwaOvUsRBOt9JN7m+fwxcfuU1WDzLkqvQtLL6sRqGrLMU90VS4sfyBlhH82dqD5jK4Q1aWWEyBnFRiL4U5W+44BKEMYq7LqXIBHHOZkQBKDwYXqVJYxOUnXitu0IyhT8ziJqs07PRgOXlwN+wLHee69FM8+6PnG33vQlJcINNYmdnfsOEXmJHjfFr45yaQIDAQAB")
-	g3pkp, _ = base64.StdEncoding.DecodeString("MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAylJL6h7/ziRrqNpyGGjVVl0OSFotNQl2Ws+kyByxqf5TifutNP+IW5+75+gAAdw1c3UDrbOxuaR9KyZ5zhVACu9RuJ8yjHxwhlJLFv5qJ2vmNnpiUNjfmonMCSnrTykUiIALjzgegGoYfB29lzt4fUVJNk9BzaLgdlc8aDF5ZMlu11EeZsOiZCx5wOdlw1aEU1pDbcuaAiDS7xpp0bCdc6LgKmBlUDHP+7MvvxGIQC61SRAPCm7cl/q/LJ8FOQtYVK8GlujFjgEWvKgaTUHFk5GiHqGL8v7BiCRJo0dLxRMB3adXEmliK+v+IO9p+zql8H4p7u2WFvexH6DkkCXgMwIDAQAB")
-	// g3ecc, _ = base64.StdEncoding.DecodeString("MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEG4ANKJrwlpAPXThRcA3Z4XbkwQvWhj5J/kicXpbBQclS4uyuQ5iSOGKcuCRt8ralqREJXuRsnLZo0sIT680+VQ==")
-)
 
 func testTls(ip string, config *ScanConfig, record *ScanRecord) bool {
 	start := time.Now()
@@ -28,7 +22,7 @@ func testTls(ip string, config *ScanConfig, record *ScanRecord) bool {
 
 	var serverName string
 	if len(config.ServerName) == 0 {
-		serverName = randomHost()
+		serverName = ""
 	} else {
 		serverName = config.ServerName[rand.Intn(len(config.ServerName))]
 	}
@@ -36,16 +30,17 @@ func testTls(ip string, config *ScanConfig, record *ScanRecord) bool {
 	tlscfg := &tls.Config{
 		InsecureSkipVerify: true,
 		MinVersion:         tls.VersionTLS10,
-		MaxVersion:         tls.VersionTLS13,
+		MaxVersion:         tls.VersionTLS12,
 		CipherSuites: []uint16{
-			tls.TLS_AES_128_GCM_SHA256,
-			tls.LS_CHACHA20_POLY1305_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
 			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
-			tls.TLS_RSA_WITH_AES_128_CBC_SHA256,
+//			tls.TLS_AES_128_GCM_SHA256,
+//			tls.TLS_CHACHA20_POLY1305_SHA256,
+//			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+//			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+//			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+//			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+//			tls.TLS_RSA_WITH_AES_128_CBC_SHA256,
 		},
 		ServerName: serverName,
 	}
@@ -57,16 +52,12 @@ func testTls(ip string, config *ScanConfig, record *ScanRecord) bool {
 	if err = tlsconn.Handshake(); err != nil {
 		return false
 	}
-	if config.Level = 1 {
+	if config.Level > 3 {
 		pcs := tlsconn.ConnectionState().PeerCertificates
 		if pcs == nil || len(pcs) < 2 {
 			return false
 		}
-		if org := pcs[0].Subject.Organization; len(org) == 0 || org[0] != "Google Inc" {
-			return false
-		}
-		pkp := pcs[1].RawSubjectPublicKeyInfo
-		if !bytes.Equal(g2pkp, pkp) && !bytes.Equal(g3pkp, pkp) { // && !bytes.Equal(g3ecc, pkp[:]) {
+		if org := pcs[0].Subject.Organization; len(org) == 0 || org[0] != "Google LLC" {
 			return false
 		}
 	}
@@ -84,6 +75,9 @@ func testTls(ip string, config *ScanConfig, record *ScanRecord) bool {
 			Timeout: config.ScanMaxRTT - time.Since(start),
 		}
 		resp, _ := c.Do(req)
+		if resp == nil || (resp.StatusCode < 200 || resp.StatusCode >= 400) || !strings.Contains(resp.Header.Get("Alt-Svc"), `quic=":443"`) {
+			return false
+		}
 		if resp == nil || (resp.StatusCode < 200 || resp.StatusCode >= 400) {
 			return false
 		}
